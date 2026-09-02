@@ -1,0 +1,12 @@
+{
+  "name": "watobot-extension",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Watobot browser extension",
+  "scripts": {
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "jsdom": "^25.0.0"
+  }
+}

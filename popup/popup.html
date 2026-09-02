@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Watobot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header class="topbar">
+    <img src="../icons/icon32.png" class="logo" alt="Watobot" />
+    <span class="brand">Watobot</span>
+    <span id="statusDot" class="status-dot" title="Disconnected"></span>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="setup">Setup</button>
+    <button class="tab-btn" data-tab="compose">New message</button>
+    <button class="tab-btn" data-tab="history">History</button>
+  </nav>
+
+  <section id="tab-setup" class="tab-panel active">
+    <p class="hint">
+      Connect your Watobot API key. Get one at
+      <a href="https://watobot.xyz" target="_blank" rel="noopener">watobot.xyz</a>
+      after linking your WhatsApp number.
+    </p>
+    <label class="field-label" for="apiKeyInput">Watobot API key</label>
+    <input id="apiKeyInput" type="password" placeholder="Paste your API key" autocomplete="off" />
+    <button id="testBtn" class="primary-btn">Connect / Test</button>
+    <div id="connectMsg" class="message"></div>
+
+    <div id="connectedInfo" class="connected-info hidden">
+      <div class="connected-row">
+        <span class="label">Connected number</span>
+        <span id="connectedPhone" class="value"></span>
+      </div>
+      <button id="disconnectBtn" class="link-btn">Disconnect</button>
+    </div>
+  </section>
+
+  <section id="tab-compose" class="tab-panel">
+    <div id="composeForm">
+      <label class="field-label" for="toInput">To (phone number)</label>
+      <input id="toInput" type="text" placeholder="e.g. +919876543210" />
+      <label class="field-label" for="messageInput">Message</label>
+      <textarea id="messageInput" rows="4" placeholder="Type your message... (Enter to send)"></textarea>
+      <button id="sendBtn" class="primary-btn">Send</button>
+    </div>
+    <div id="sendingState" class="sending-state hidden">
+      <span class="spinner"></span>
+      <span id="sendingLabel">Sending message...</span>
+    </div>
+    <div id="sendMsg" class="message"></div>
+    <div id="resultActions" class="result-actions hidden">
+      <button id="retryBtn" class="link-btn">Edit &amp; try again</button>
+    </div>
+  </section>
+
+  <section id="tab-history" class="tab-panel">
+    <input id="searchInput" type="text" class="search-input" placeholder="Search by number or message..." />
+    <ul id="historyList" class="history-list"></ul>
+    <div id="historyEmpty" class="hint hidden">No messages yet.</div>
+  </section>
+
+  <script src="../lib/libphonenumber-js.min.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

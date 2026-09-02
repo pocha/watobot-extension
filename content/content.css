@@ -1,0 +1,12 @@
+[data-watobot="icon"] {
+  all: revert;
+  box-sizing: border-box;
+}
+
+[data-watobot="icon"]:hover {
+  filter: brightness(0.92);
+}
+
+[data-watobot="wrapper"] {
+  all: revert;
+}
