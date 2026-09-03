@@ -36,6 +36,10 @@ page and lets you send WhatsApp messages to them through
   template's content in place of the `/name` text.
 - **Timeouts** — every call to `api.watobot.xyz` is aborted after 75s and
   surfaces as a normal failed/error result rather than hanging.
+- **Failure notifications** — a send failure (bad number, API error, timeout)
+  triggers a native OS notification, not just a red badge in History — sends
+  are fire-and-forget from both compose surfaces, so without this a failure
+  could otherwise go unnoticed until you happen to open the popup.
 
 ## Install in the browser (Chrome / Brave)
 
