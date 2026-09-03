@@ -36,6 +36,35 @@ function countryFromE164(digits) {
   }
 }
 
+function formatPhoneForDisplay(to) {
+  if (to.includes('@')) return to; // group JID, not a phone number
+  try {
+    const parsed = libphonenumber.parsePhoneNumberFromString('+' + to);
+    return parsed ? parsed.formatInternational() : `+${to}`;
+  } catch (e) {
+    return `+${to}`;
+  }
+}
+
+// Sends happen fire-and-forget from both compose surfaces (the on-page panel
+// closes the instant "Send" is hit, and the popup can be closed mid-send) —
+// a failure otherwise has no visible surface until someone happens to open
+// History, so surface it as a native OS notification too.
+function notifySendFailure(entry) {
+  try {
+    chrome.notifications.create(`watobot-send-failed-${entry.id}`, {
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'WhatsApp message failed to send',
+      message: `To ${formatPhoneForDisplay(entry.to)}: ${entry.error || 'Unknown error'}`,
+      priority: 2
+    });
+  } catch (e) {
+    // Notifications can be disabled at the OS/browser level — never let that
+    // break the actual send flow.
+  }
+}
+
 async function testConnection(apiKey) {
   const res = await fetchWithTimeout(`${API_BASE}/api/whatsapp`, {
     method: 'GET',
@@ -119,6 +148,8 @@ async function sendMessage({ to, message }) {
     entry.error = err.message || 'Network error';
   }
 
+  if (entry.status === 'failed') notifySendFailure(entry);
+
   await updateHistoryEntry(entry);
   return entry;
 }
@@ -147,6 +178,10 @@ chrome.runtime.onInstalled.addListener(() => {
     title: 'Send WhatsApp message',
     contexts: ['selection']
   });
+});
+
+chrome.notifications.onClicked.addListener((notificationId) => {
+  chrome.notifications.clear(notificationId);
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
