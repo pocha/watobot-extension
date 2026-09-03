@@ -9,6 +9,7 @@
       btn.classList.add('active');
       document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
       if (btn.dataset.tab === 'history') renderHistory();
+      if (btn.dataset.tab === 'templates') renderTemplates();
     });
   });
 
@@ -218,6 +219,118 @@
       ev.preventDefault();
       submitCompose();
     }
+  });
+
+  WatobotTemplateUtils.attachTemplateAutocomplete({
+    textarea: messageInput,
+    listEl: document.getElementById('templateSuggestions'),
+    getTemplates: (cb) => chrome.storage.local.get('templates', ({ templates = [] }) => cb(templates))
+  });
+
+  // ---------- Templates ----------
+
+  const templateNameInput = document.getElementById('templateNameInput');
+  const templateContentInput = document.getElementById('templateContentInput');
+  const saveTemplateBtn = document.getElementById('saveTemplateBtn');
+  const cancelTemplateEditBtn = document.getElementById('cancelTemplateEditBtn');
+  const templateMsg = document.getElementById('templateMsg');
+  const templateList = document.getElementById('templateList');
+  const templateEmpty = document.getElementById('templateEmpty');
+
+  let editingTemplateId = null;
+
+  function resetTemplateForm() {
+    editingTemplateId = null;
+    templateNameInput.value = '';
+    templateContentInput.value = '';
+    saveTemplateBtn.textContent = 'Save template';
+    cancelTemplateEditBtn.classList.add('hidden');
+    setMessage(templateMsg, '', null);
+  }
+
+  function renderTemplates() {
+    chrome.storage.local.get('templates', ({ templates = [] }) => {
+      const sorted = [...templates].sort((a, b) => a.name.localeCompare(b.name));
+      templateList.innerHTML = '';
+      templateEmpty.classList.toggle('hidden', sorted.length > 0);
+
+      sorted.forEach((t) => {
+        const li = document.createElement('li');
+        li.className = 'history-item';
+        li.innerHTML = `
+          <div class="row1">
+            <span class="template-name">/${escapeHtml(t.name)}</span>
+            <span class="template-actions">
+              <button type="button" class="icon-btn edit-btn" title="Edit">Edit</button>
+              <button type="button" class="icon-btn delete-btn" title="Delete">Delete</button>
+            </span>
+          </div>
+          <div class="msg">${escapeHtml(t.content)}</div>
+        `;
+        li.querySelector('.edit-btn').addEventListener('click', () => {
+          editingTemplateId = t.id;
+          templateNameInput.value = t.name;
+          templateContentInput.value = t.content;
+          saveTemplateBtn.textContent = 'Update template';
+          cancelTemplateEditBtn.classList.remove('hidden');
+          setMessage(templateMsg, '', null);
+          templateNameInput.focus();
+        });
+        li.querySelector('.delete-btn').addEventListener('click', () => {
+          chrome.storage.local.get('templates', ({ templates: current = [] }) => {
+            const next = current.filter((x) => x.id !== t.id);
+            chrome.storage.local.set({ templates: next }, () => {
+              if (editingTemplateId === t.id) resetTemplateForm();
+              renderTemplates();
+            });
+          });
+        });
+        templateList.appendChild(li);
+      });
+    });
+  }
+
+  saveTemplateBtn.addEventListener('click', () => {
+    const name = templateNameInput.value.trim().replace(/^\//, '');
+    const content = templateContentInput.value.trim();
+
+    if (!WatobotTemplateUtils.isValidTemplateName(name)) {
+      setMessage(templateMsg, 'Name can only contain letters, numbers, - and _ (no spaces).', 'error');
+      return;
+    }
+    if (!content) {
+      setMessage(templateMsg, 'Enter a message for this template.', 'error');
+      return;
+    }
+
+    chrome.storage.local.get('templates', ({ templates = [] }) => {
+      const duplicate = templates.find(
+        (t) => t.id !== editingTemplateId && t.name.toLowerCase() === name.toLowerCase()
+      );
+      if (duplicate) {
+        setMessage(templateMsg, `A template named "${name}" already exists.`, 'error');
+        return;
+      }
+
+      let next;
+      if (editingTemplateId) {
+        next = templates.map((t) => (t.id === editingTemplateId ? { ...t, name, content } : t));
+      } else {
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        next = [...templates, { id, name, content }];
+      }
+
+      chrome.storage.local.set({ templates: next }, () => {
+        resetTemplateForm();
+        renderTemplates();
+      });
+    });
+  });
+
+  cancelTemplateEditBtn.addEventListener('click', resetTemplateForm);
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.templates) renderTemplates();
   });
 
   // ---------- History ----------

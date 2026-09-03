@@ -35,6 +35,7 @@
       "js": [
         "lib/libphonenumber-js.min.js",
         "content/phone-utils.js",
+        "content/template-utils.js",
         "content/content.js"
       ],
       "css": ["content/content.css"],
