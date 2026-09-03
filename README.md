@@ -41,7 +41,7 @@ page and lets you send WhatsApp messages to them through
 
 1. Go to `chrome://extensions` (or `brave://extensions`).
 2. Enable **Developer mode** (top right).
-3. Click **Load unpacked** and select this project's folder.
+3. Click **Load unpacked** and select this project's folder. If you have NOT cloned the repo, you can download the latest code zip directly from [this link](https://github.com/pocha/watobot-extension/archive/refs/heads/main.zip)
 4. Click the Watobot icon in the toolbar, paste your Watobot API key, and
    click **Connect / Test**.
 
