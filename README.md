@@ -29,6 +29,11 @@ page and lets you send WhatsApp messages to them through
 - **History** — every send is logged locally (`chrome.storage.local`) with
   its live status (`sending` → `sent`/`failed`, shown with a spinner while
   in flight) and is searchable by number or message text from the popup.
+- **Templates** — save named, reusable messages from the popup's Templates
+  tab. In any compose box (the popup's New message tab, or the on-page
+  panel), typing `/name` as the entire message — nothing before or after —
+  shows a matching-templates dropdown; Enter/Tab or a click inserts that
+  template's content in place of the `/name` text.
 - **Timeouts** — every call to `api.watobot.xyz` is aborted after 75s and
   surfaces as a normal failed/error result rather than hanging.
 
@@ -63,7 +68,8 @@ manifest.json              MV3 manifest
 background/background.js   Service worker — the only place API calls happen
 content/content.js         Page scanning, icon injection, on-page compose panel
 content/phone-utils.js     Shared phone-number detection/parsing helpers
-popup/                     Toolbar popup (Setup / New message / History tabs)
+content/template-utils.js  Shared "/name" template matching + autocomplete wiring
+popup/                     Toolbar popup (Setup / New message / Templates / History tabs)
 lib/                       Vendored libphonenumber-js (UMD bundle)
 test/                      Headless test suite (see below)
 ```
@@ -90,6 +96,10 @@ second:
   *later* (simulating JS-rendered/SPA content) gets picked up via the real
   debounced `MutationObserver`, and a static guard confirming detection
   never checks tab focus/visibility.
+- **`test/template-utils.test.js`** — pure logic tests for the `/name`
+  template matcher and filter (trigger only fires when the box is *just*
+  `/name`, case-insensitive prefix matching, alphabetical order, result cap,
+  template-name validation).
 
 **Known gap** — the popup UI, the real right-click context-menu action, and
 true multi-tab/background-tab behavior aren't covered by automated tests

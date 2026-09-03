@@ -281,6 +281,27 @@
           cursor: pointer;
         }
         .hint { font-size: 10.5px; color: #999; margin-top: 4px; }
+        .template-suggestions {
+          list-style: none;
+          margin: 4px 0 0;
+          padding: 4px;
+          max-height: 120px;
+          overflow-y: auto;
+          background: #ffffff;
+          border: 1px solid #d8dde3;
+          border-radius: 6px;
+        }
+        .template-suggestions.hidden { display: none; }
+        .template-suggestion {
+          padding: 5px 7px;
+          border-radius: 4px;
+          font-size: 12.5px;
+          cursor: pointer;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .template-suggestion.active { background: #e5f8ee; color: #128C4A; }
       </style>
       <div class="panel">
         <div class="header">
@@ -289,7 +310,8 @@
           <button class="close-btn" type="button">&times;</button>
         </div>
         <div class="body">
-          <textarea placeholder="Type a WhatsApp message..." rows="3"></textarea>
+          <textarea placeholder="Type a WhatsApp message... (/ for templates)" rows="3"></textarea>
+          <ul class="template-suggestions hidden"></ul>
           <div class="row">
             <button class="send-btn" type="button">Send</button>
           </div>
@@ -302,6 +324,12 @@
     const textarea = composeShadow.querySelector('textarea');
     const sendBtn = composeShadow.querySelector('.send-btn');
     const closeBtn = composeShadow.querySelector('.close-btn');
+
+    window.WatobotTemplateUtils.attachTemplateAutocomplete({
+      textarea,
+      listEl: composeShadow.querySelector('.template-suggestions'),
+      getTemplates: (cb) => chrome.storage.local.get('templates', ({ templates = [] }) => cb(templates))
+    });
 
     closeBtn.addEventListener('click', closeComposePanel);
     sendBtn.addEventListener('click', submitMessage);

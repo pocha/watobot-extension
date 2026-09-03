@@ -269,6 +269,64 @@ textarea {
   text-transform: uppercase;
 }
 
+.template-name {
+  color: var(--primary);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.template-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--on-surface-muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.icon-btn:hover { background: var(--surface-container); color: var(--on-surface); }
+
+.template-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.template-form-actions .primary-btn { margin-top: 0; flex: 1; }
+
+.template-suggestions {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 4px;
+  max-height: 150px;
+  overflow-y: auto;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.5rem;
+}
+
+.template-suggestion {
+  padding: 5px 7px;
+  border-radius: 0.375rem;
+  font-size: 12.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.template-suggestion.active {
+  background: var(--secondary-container);
+  color: var(--on-secondary-container);
+}
+
 .badge.sent { background: var(--secondary-container); color: var(--on-secondary-container); }
 .badge.failed { background: var(--error-container); color: var(--on-error-container); }
 .badge.sending {
