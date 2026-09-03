@@ -13,11 +13,13 @@
   });
 
   const statusDot = document.getElementById('statusDot');
+  const connectForm = document.getElementById('connectForm');
   const apiKeyInput = document.getElementById('apiKeyInput');
   const testBtn = document.getElementById('testBtn');
   const connectMsg = document.getElementById('connectMsg');
-  const connectedInfo = document.getElementById('connectedInfo');
+  const connectedRow = document.getElementById('connectedRow');
   const connectedPhone = document.getElementById('connectedPhone');
+  const testConnectionBtn = document.getElementById('testConnectionBtn');
   const disconnectBtn = document.getElementById('disconnectBtn');
 
   function setMessage(el, text, type) {
@@ -25,21 +27,23 @@
     el.className = 'message' + (type ? ` ${type}` : '');
   }
 
+  // Reads whatever is already in chrome.storage.local — never hits the
+  // Watobot API. The connected number is fetched once (on Connect, or when
+  // the user explicitly clicks "Test Connection") and cached locally from
+  // then on; the popup opening/reopening never re-queries it.
   function refreshState() {
     chrome.runtime.sendMessage({ type: 'GET_STATE' }, (resp) => {
       if (!resp || !resp.ok) return;
       const { apiKey, connected, connectedPhone: phone } = resp.data;
       if (apiKey) apiKeyInput.value = apiKey;
-      if (connected && phone) {
-        statusDot.classList.add('connected');
-        statusDot.title = 'Connected';
-        connectedInfo.classList.remove('hidden');
-        connectedPhone.textContent = formatPhone(phone);
-      } else {
-        statusDot.classList.remove('connected');
-        statusDot.title = 'Disconnected';
-        connectedInfo.classList.add('hidden');
-      }
+
+      const isConnected = connected && phone;
+      statusDot.classList.toggle('connected', !!isConnected);
+      statusDot.title = isConnected ? 'Connected' : 'Disconnected';
+      connectForm.classList.toggle('hidden', !!isConnected);
+      connectedRow.classList.toggle('hidden', !isConnected);
+      disconnectBtn.classList.toggle('hidden', !apiKey);
+      if (isConnected) connectedPhone.textContent = formatPhone(phone);
     });
   }
 
@@ -52,10 +56,10 @@
     }
   }
 
-  function setButtonLoading(btn, loading, loadingLabel, idleLabel) {
+  function setButtonLoading(btn, loading, loadingLabel, idleLabel, spinnerClass = 'spinner-light') {
     btn.disabled = loading;
     if (loading) {
-      btn.innerHTML = `<span class="btn-content"><span class="spinner spinner-light"></span>${loadingLabel}</span>`;
+      btn.innerHTML = `<span class="btn-content"><span class="spinner ${spinnerClass}"></span>${loadingLabel}</span>`;
     } else {
       btn.textContent = idleLabel;
     }
@@ -87,6 +91,32 @@
         setMessage(connectMsg, (resp && resp.error) || 'Could not connect. Check your key.', 'error');
       }
       refreshState();
+    });
+  });
+
+  testConnectionBtn.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'GET_STATE' }, (stateResp) => {
+      const apiKey = stateResp && stateResp.ok && stateResp.data.apiKey;
+      if (!apiKey) return;
+
+      setButtonLoading(testConnectionBtn, true, 'Testing…', 'Test Connection', 'spinner');
+      setMessage(connectMsg, '', null);
+
+      chrome.runtime.sendMessage({ type: 'CONNECT', apiKey }, (resp) => {
+        setButtonLoading(testConnectionBtn, false, '', 'Test Connection');
+        if (chrome.runtime.lastError) {
+          setMessage(connectMsg, 'Extension error. Try again.', 'error');
+          return;
+        }
+        if (resp && resp.ok && resp.data.connected) {
+          setMessage(connectMsg, 'Still connected.', 'success');
+        } else if (resp && resp.ok && !resp.data.connected) {
+          setMessage(connectMsg, 'No WhatsApp number connected on Watobot anymore.', 'error');
+        } else {
+          setMessage(connectMsg, (resp && resp.error) || 'Could not reach Watobot.', 'error');
+        }
+        refreshState();
+      });
     });
   });
 

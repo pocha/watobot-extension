@@ -217,17 +217,24 @@
         }
         .panel.open { display: block; }
         .header {
-          background: #006d2f;
-          color: #fff;
+          background: #f7f9fc;
+          color: #191c1e;
+          border-bottom: 1px solid #bbcbb9;
           padding: 8px 10px;
           font-size: 12.5px;
           display: flex;
-          justify-content: space-between;
           align-items: center;
           gap: 8px;
         }
+        .header .logo {
+          width: 18px;
+          height: 18px;
+          border-radius: 4px;
+          flex-shrink: 0;
+        }
         .header .to {
-          font-weight: 600;
+          flex: 1;
+          font-weight: 700;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -235,12 +242,14 @@
         .close-btn {
           background: transparent;
           border: none;
-          color: #fff;
+          color: #666;
           cursor: pointer;
           font-size: 15px;
           line-height: 1;
           padding: 2px 4px;
+          flex-shrink: 0;
         }
+        .close-btn:hover { color: #191c1e; }
         .body { padding: 8px; }
         textarea {
           width: 100%;
@@ -258,13 +267,10 @@
         textarea:focus { border-color: #25D366; }
         .row {
           display: flex;
-          justify-content: space-between;
+          justify-content: flex-end;
           align-items: center;
           margin-top: 6px;
         }
-        .status { font-size: 11.5px; color: #666; }
-        .status.sent { color: #128C4A; }
-        .status.failed { color: #c0392b; }
         .send-btn {
           background: #25D366;
           color: #fff;
@@ -274,59 +280,28 @@
           font-size: 12.5px;
           cursor: pointer;
         }
-        .send-btn:disabled { opacity: 0.6; cursor: default; }
         .hint { font-size: 10.5px; color: #999; margin-top: 4px; }
-        .sending-view {
-          display: none;
-          align-items: center;
-          gap: 8px;
-          padding: 10px 2px;
-          font-size: 12px;
-          color: #555;
-        }
-        .sending-view.open { display: flex; }
-        .compose-view.hidden { display: none; }
-        .spinner {
-          width: 13px;
-          height: 13px;
-          border: 2px solid rgba(0,0,0,0.15);
-          border-top-color: #006d2f;
-          border-radius: 50%;
-          animation: watobot-spin 0.7s linear infinite;
-          flex-shrink: 0;
-        }
-        @keyframes watobot-spin { to { transform: rotate(360deg); } }
       </style>
       <div class="panel">
         <div class="header">
+          <img class="logo" src="${chrome.runtime.getURL('icons/icon32.png')}" alt="Watobot" />
           <span class="to"></span>
           <button class="close-btn" type="button">&times;</button>
         </div>
         <div class="body">
-          <div class="compose-view">
-            <textarea placeholder="Type a WhatsApp message..." rows="3"></textarea>
-            <div class="row">
-              <span class="status"></span>
-              <button class="send-btn" type="button">Send</button>
-            </div>
-            <div class="hint">Enter to send &middot; Shift+Enter for a new line</div>
+          <textarea placeholder="Type a WhatsApp message..." rows="3"></textarea>
+          <div class="row">
+            <button class="send-btn" type="button">Send</button>
           </div>
-          <div class="sending-view">
-            <span class="spinner"></span>
-            <span class="sending-label">Sending...</span>
-          </div>
+          <div class="hint">Enter to send &middot; Shift+Enter for a new line &middot; sent messages show up in the extension's History tab</div>
         </div>
       </div>
     `;
 
     const panel = composeShadow.querySelector('.panel');
-    const composeView = composeShadow.querySelector('.compose-view');
-    const sendingView = composeShadow.querySelector('.sending-view');
-    const sendingLabel = composeShadow.querySelector('.sending-label');
     const textarea = composeShadow.querySelector('textarea');
     const sendBtn = composeShadow.querySelector('.send-btn');
     const closeBtn = composeShadow.querySelector('.close-btn');
-    const status = composeShadow.querySelector('.status');
 
     closeBtn.addEventListener('click', closeComposePanel);
     sendBtn.addEventListener('click', submitMessage);
@@ -352,39 +327,14 @@
       if (!message || !currentComposeTarget) return;
       const target = currentComposeTarget;
 
-      // Hand off to the background service worker and let the compose box
-      // disappear immediately — the send continues even if this panel is
-      // closed (e.g. the user navigates away) and always lands in History.
-      composeView.classList.add('hidden');
-      sendingView.classList.add('open');
-      sendingLabel.textContent = `Sending to ${window.WatobotPhoneUtils.formatForDisplay(target)}...`;
-
-      chrome.runtime.sendMessage(
-        { type: 'SEND_MESSAGE', to: target, message },
-        (resp) => {
-          if (currentComposeTarget !== target) return; // panel reused for a different number meanwhile
-          sendingView.classList.remove('open');
-
-          if (chrome.runtime.lastError) {
-            composeView.classList.remove('hidden');
-            status.textContent = 'Lost connection — check History for the result';
-            status.className = 'status failed';
-            return;
-          }
-          if (resp && resp.ok) {
-            sendingLabel.textContent = 'Sent ✓';
-            sendingView.classList.add('open');
-            textarea.value = '';
-            setTimeout(() => {
-              if (currentComposeTarget === target) closeComposePanel();
-            }, 1100);
-          } else {
-            composeView.classList.remove('hidden');
-            status.textContent = (resp && resp.data && resp.data.error) || (resp && resp.error) || 'Failed to send';
-            status.className = 'status failed';
-          }
-        }
-      );
+      // Close the panel immediately rather than lingering on a "sending..."
+      // state — sitting there implies the user needs to keep it open, which
+      // just holds them up for no reason. The background service worker owns
+      // the send from here regardless of whether this panel exists anymore;
+      // progress and the final status show up in the popup's History tab
+      // (with a spinner while still in flight).
+      closeComposePanel();
+      chrome.runtime.sendMessage({ type: 'SEND_MESSAGE', to: target, message });
     }
   }
 
@@ -424,17 +374,10 @@
     const panel = composeShadow.querySelector('.panel');
     const toEl = composeShadow.querySelector('.to');
     const textarea = composeShadow.querySelector('textarea');
-    const status = composeShadow.querySelector('.status');
-    const composeView = composeShadow.querySelector('.compose-view');
-    const sendingView = composeShadow.querySelector('.sending-view');
 
     currentComposeTarget = e164;
     toEl.textContent = window.WatobotPhoneUtils.formatForDisplay(e164);
-    status.textContent = '';
-    status.className = 'status';
     textarea.value = '';
-    composeView.classList.remove('hidden');
-    sendingView.classList.remove('open');
     panel.classList.add('open');
     positionPanel(rect || { left: window.innerWidth / 2 - 150, bottom: window.innerHeight / 2, top: window.innerHeight / 2 });
     setTimeout(() => textarea.focus(), 0);

@@ -1,5 +1,7 @@
 * { box-sizing: border-box; }
 
+.hidden { display: none !important; }
+
 :root {
   --primary: #006d2f;
   --primary-container: #25d366; /* whatsapp green */
@@ -34,8 +36,9 @@ body {
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--background);
+  color: var(--on-surface);
+  border-bottom: 1px solid var(--outline-variant);
 }
 
 .logo {
@@ -105,8 +108,6 @@ body {
   line-height: 1.5;
   margin: 0 0 10px;
 }
-
-.hint.hidden { display: none; }
 
 a { color: var(--primary); }
 
@@ -178,28 +179,41 @@ textarea {
 .message.success { color: var(--on-primary-container); }
 .message.error { color: var(--error); }
 
-.connected-info {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--outline-variant);
-}
-
-.connected-info.hidden { display: none; }
-
 .connected-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.5rem;
 }
 
-.connected-row .label {
-  color: var(--on-surface-muted);
-  font-size: 12px;
-}
-
-.connected-row .value {
+.connected-phone {
   font-weight: 700;
+  font-size: 13.5px;
+}
+
+.outline-btn {
+  flex-shrink: 0;
+  background: var(--surface-container-lowest);
+  color: var(--primary);
+  border: 1px solid var(--outline-variant);
+  border-radius: 0.5rem;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.outline-btn:hover { border-color: var(--primary-container); }
+.outline-btn:disabled { opacity: 0.6; cursor: default; }
+
+#disconnectBtn {
+  margin-top: 10px;
+  display: block;
 }
 
 .search-input {
@@ -314,5 +328,3 @@ textarea {
   display: flex;
   justify-content: flex-end;
 }
-
-.result-actions.hidden { display: none; }

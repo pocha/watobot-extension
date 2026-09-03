@@ -27,18 +27,20 @@
       <a href="https://watobot.xyz" target="_blank" rel="noopener">watobot.xyz</a>
       after linking your WhatsApp number.
     </p>
-    <label class="field-label" for="apiKeyInput">Watobot API key</label>
-    <input id="apiKeyInput" type="password" placeholder="Paste your API key" autocomplete="off" />
-    <button id="testBtn" class="primary-btn">Connect / Test</button>
+    <div id="connectForm">
+      <label class="field-label" for="apiKeyInput">Watobot API key</label>
+      <input id="apiKeyInput" type="password" placeholder="Paste your API key" autocomplete="off" />
+      <button id="testBtn" class="primary-btn">Connect / Test</button>
+    </div>
+
+    <div id="connectedRow" class="connected-row hidden">
+      <span id="connectedPhone" class="connected-phone"></span>
+      <button id="testConnectionBtn" class="outline-btn">Test Connection</button>
+    </div>
+
     <div id="connectMsg" class="message"></div>
 
-    <div id="connectedInfo" class="connected-info hidden">
-      <div class="connected-row">
-        <span class="label">Connected number</span>
-        <span id="connectedPhone" class="value"></span>
-      </div>
-      <button id="disconnectBtn" class="link-btn">Disconnect</button>
-    </div>
+    <button id="disconnectBtn" class="link-btn hidden">Use a different key</button>
   </section>
 
   <section id="tab-compose" class="tab-panel">

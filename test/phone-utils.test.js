@@ -81,3 +81,40 @@ test('parseSingle handles a selection with surrounding whitespace/punctuation', 
   assert.ok(result);
   assert.equal(result.e164, '+919876543210');
 });
+
+// wa.me-style "bare" numbers: no "+", no connected country, but the digits
+// already spell out a real country calling code (e.g. 91 for India). These
+// are common in the wild (WhatsApp's own wa.me links use exactly this
+// format) and libphonenumber won't guess the country on its own without a
+// region hint — findNumbersInText retries such runs with a "+" prepended.
+test('finds a bare country-code-prefixed number with no default region (wa.me style)', () => {
+  const matches = findNumbersInText('to: 919876543210, message: hi');
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].e164, '+919876543210');
+});
+
+test('does not double-count a bare number already covered by an explicit +', () => {
+  const matches = findNumbersInText('reach +919876543210 directly');
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].e164, '+919876543210');
+});
+
+test('still picks up the leading number out of a WhatsApp group JID (greedy by design)', () => {
+  // "919876543210-1234567890@g.us" is a group id, not a number to message,
+  // but the leading run is genuinely phone-shaped — surfacing it just means
+  // an icon that targets the individual number, which is harmless.
+  const matches = findNumbersInText('919876543210-1234567890@g.us');
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].e164, '+919876543210');
+});
+
+test('is deliberately greedy: prefers an extra icon over a missed number', () => {
+  // A digit run that libphonenumber considers merely "possible" (plausible
+  // length/shape for some country) rather than strictly "valid" should still
+  // surface a match — a false positive here just means an icon nobody clicks,
+  // while a false negative means the user has to select+right-click instead.
+  const matches = findNumbersInText('919876543210');
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].e164, '+919876543210');
+  assert.equal(matches[0].valid, true);
+});

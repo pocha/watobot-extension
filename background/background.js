@@ -57,7 +57,7 @@ async function testConnection(apiKey) {
 
 async function connect(apiKey) {
   const data = await testConnection(apiKey);
-  const phone = data.phone || null;
+  const phone = data.phoneNumber || null;
   const connected = !!data.connected;
   const country = phone ? countryFromE164(phone) : null;
 
