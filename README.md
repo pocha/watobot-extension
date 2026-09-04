@@ -28,7 +28,14 @@ page and lets you send WhatsApp messages to them through
   panel or the popup doesn't cancel the send.
 - **History** — every send is logged locally (`chrome.storage.local`) with
   its live status (`sending` → `sent`/`failed`, shown with a spinner while
-  in flight) and is searchable by number or message text from the popup.
+  in flight) and is searchable by number or message text from the popup. A
+  failed row shows a retry icon (hover for a tooltip); retrying reuses the
+  same row rather than adding a new one, so its status just flips back to
+  `sending` in place.
+- **Send concurrency cap** — at most 3 messages can be `sending` at once
+  (across every surface — popup, on-page panel, retries). A 4th attempt
+  fails immediately without ever calling the API, and is recorded/notified
+  like any other failure, explaining why.
 - **Templates** — save named, reusable messages from the popup's Templates
   tab. In any compose box (the popup's New message tab, or the on-page
   panel), typing `/name` as the entire message — nothing before or after —

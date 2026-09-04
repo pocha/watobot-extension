@@ -358,10 +358,16 @@
         const badgeInner = m.status === 'sending'
           ? '<span class="spinner"></span>Sending'
           : m.status;
+        const retryBtn = m.status === 'failed'
+          ? '<button type="button" class="icon-btn retry-btn" title="Retry">&#8635;</button>'
+          : '';
         li.innerHTML = `
           <div class="row1">
             <span>${escapeHtml(formatPhone(m.to.replace('+', '')))}</span>
-            <span class="badge ${m.status}">${badgeInner}</span>
+            <span class="row1-right">
+              ${retryBtn}
+              <span class="badge ${m.status}">${badgeInner}</span>
+            </span>
           </div>
           <div class="msg">${escapeHtml(m.message)}</div>
           <div class="meta">
@@ -369,6 +375,14 @@
             ${m.status === 'failed' && m.error ? `<span>${escapeHtml(m.error)}</span>` : ''}
           </div>
         `;
+        if (m.status === 'failed') {
+          li.querySelector('.retry-btn').addEventListener('click', () => {
+            chrome.runtime.sendMessage({ type: 'RETRY_MESSAGE', id: m.id });
+            // No response handling needed here: the entry flips to "sending"
+            // in storage immediately, and the existing chrome.storage.onChanged
+            // listener re-renders this same row with the spinner.
+          });
+        }
         historyList.appendChild(li);
       });
     });

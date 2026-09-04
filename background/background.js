@@ -3,6 +3,7 @@ importScripts('../lib/libphonenumber-js.min.js');
 const API_BASE = 'https://api.watobot.xyz';
 const MAX_HISTORY = 500;
 const API_TIMEOUT_MS = 75000;
+const MAX_CONCURRENT_SENDS = 3;
 
 async function getStorage(keys) {
   return chrome.storage.local.get(keys);
@@ -100,7 +101,11 @@ async function connect(apiKey) {
   return { connected, phone, country };
 }
 
-async function sendMessage({ to, message }) {
+// `id` is set when this is a retry — reuses the existing History row (its
+// status flips failed -> sending -> sent/failed in place) instead of adding
+// a new one, so a retried message stays a single row a user can keep an eye
+// on rather than accumulating a fresh entry per attempt.
+async function sendMessage({ to, message, id }) {
   const { apiKey } = await getStorage('apiKey');
   if (!apiKey) {
     throw new Error('No Watobot API key configured');
@@ -110,9 +115,25 @@ async function sendMessage({ to, message }) {
   // plain numbers here so history and the API request always agree, while
   // leaving group JIDs (containing "@") untouched.
   const normalizedTo = to.includes('@') ? to : to.replace(/^\+/, '');
+  const entryId = id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const inFlight = await countInFlight();
+  if (inFlight >= MAX_CONCURRENT_SENDS) {
+    const blocked = {
+      id: entryId,
+      to: normalizedTo,
+      message,
+      status: 'failed',
+      error: `Up to ${MAX_CONCURRENT_SENDS} messages can be sending at once — wait for one to finish, then retry.`,
+      timestamp: Date.now()
+    };
+    notifySendFailure(blocked);
+    await updateHistoryEntry(blocked);
+    return blocked;
+  }
 
   const entry = {
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: entryId,
     to: normalizedTo,
     message,
     status: 'sending',
@@ -120,7 +141,7 @@ async function sendMessage({ to, message }) {
     timestamp: Date.now()
   };
 
-  await pushHistory(entry);
+  await updateHistoryEntry(entry);
 
   try {
     const res = await fetchWithTimeout(`${API_BASE}/api/message`, {
@@ -154,11 +175,9 @@ async function sendMessage({ to, message }) {
   return entry;
 }
 
-async function pushHistory(entry) {
+async function countInFlight() {
   const { messages = [] } = await getStorage('messages');
-  messages.unshift(entry);
-  if (messages.length > MAX_HISTORY) messages.length = MAX_HISTORY;
-  await setStorage({ messages });
+  return messages.filter((m) => m.status === 'sending').length;
 }
 
 async function updateHistoryEntry(entry) {
@@ -168,6 +187,7 @@ async function updateHistoryEntry(entry) {
     messages[idx] = entry;
   } else {
     messages.unshift(entry);
+    if (messages.length > MAX_HISTORY) messages.length = MAX_HISTORY;
   }
   await setStorage({ messages });
 }
@@ -208,6 +228,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
         case 'SEND_MESSAGE': {
           const entry = await sendMessage({ to: message.to, message: message.message });
+          sendResponse({ ok: entry.status === 'sent', data: entry });
+          break;
+        }
+        case 'RETRY_MESSAGE': {
+          const { messages = [] } = await getStorage('messages');
+          const existing = messages.find((m) => m.id === message.id);
+          if (!existing) {
+            sendResponse({ ok: false, error: 'Message not found in history.' });
+            break;
+          }
+          const entry = await sendMessage({ to: existing.to, message: existing.message, id: existing.id });
           sendResponse({ ok: entry.status === 'sent', data: entry });
           break;
         }
