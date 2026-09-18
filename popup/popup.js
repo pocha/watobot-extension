@@ -22,6 +22,7 @@
   const connectedPhone = document.getElementById('connectedPhone');
   const testConnectionBtn = document.getElementById('testConnectionBtn');
   const disconnectBtn = document.getElementById('disconnectBtn');
+  const testMessageSection = document.getElementById('testMessageSection');
 
   function setMessage(el, text, type) {
     el.textContent = text || '';
@@ -44,6 +45,7 @@
       connectForm.classList.toggle('hidden', !!isConnected);
       connectedRow.classList.toggle('hidden', !isConnected);
       disconnectBtn.classList.toggle('hidden', !apiKey);
+      testMessageSection.classList.toggle('hidden', !isConnected);
       if (isConnected) connectedPhone.textContent = formatPhone(phone);
     });
   }
@@ -55,6 +57,20 @@
     } catch (e) {
       return `+${digits}`;
     }
+  }
+
+  // Relative ("5m ago") for anything sent today, otherwise the full date —
+  // a bare relative label on an older entry would be ambiguous ("2h ago"
+  // meaning yesterday reads as if it just happened).
+  function formatTimestamp(ts) {
+    const date = new Date(ts);
+    const now = new Date();
+    if (date.toDateString() !== now.toDateString()) return date.toLocaleString();
+
+    const minutes = Math.round((now - date) / 60000);
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    return `${Math.round(minutes / 60)}h ago`;
   }
 
   // Just the hostname (no scheme, path, or query) so the source link fits the
@@ -349,13 +365,31 @@
   const historyList = document.getElementById('historyList');
   const historyEmpty = document.getElementById('historyEmpty');
   const searchInput = document.getElementById('searchInput');
+  const notifTip = document.getElementById('notifTip');
+
+  // Chrome/Brave never prompt for extension-notification permission and
+  // chrome.notifications.getPermissionLevel() reports "granted" regardless
+  // of the actual OS-level setting — there's no way to detect or open that
+  // setting from here, so this is a static tip rather than a conditional
+  // warning.
+  function renderNotifTip() {
+    const platform = navigator.platform || '';
+    const steps = /mac/i.test(platform)
+      ? 'System Settings → Notifications → find your browser → turn on Allow Notifications.'
+      : /win/i.test(platform)
+        ? 'Settings → System → Notifications → turn on notifications for your browser.'
+        : "your OS's notification settings and enable them for your browser.";
+    notifTip.textContent = `To be alerted here when a message fails to send, allow notifications for your browser at the OS level:\n${steps}`;
+  }
 
   function renderHistory() {
     chrome.storage.local.get('messages', ({ messages = [] }) => {
       const query = searchInput.value.trim().toLowerCase();
       const filtered = query
         ? messages.filter(
-            (m) => m.to.toLowerCase().includes(query) || m.message.toLowerCase().includes(query)
+            (m) => m.to.toLowerCase().includes(query)
+              || m.message.toLowerCase().includes(query)
+              || m.status.toLowerCase().includes(query)
           )
         : messages;
 
@@ -365,32 +399,32 @@
       filtered.forEach((m) => {
         const li = document.createElement('li');
         li.className = 'history-item';
-        const date = new Date(m.timestamp);
         const badgeInner = m.status === 'sending'
           ? '<span class="spinner"></span>Sending'
           : m.status;
-        const retryBtn = m.status === 'failed'
-          ? '<button type="button" class="icon-btn retry-btn" title="Retry">&#8635;</button>'
-          : '';
-        const sourceBtn = m.url
+        const sourceLink = m.url
           ? `<button type="button" class="source-btn" title="${escapeHtml(m.url)}">${escapeHtml(shortenUrl(m.url))}</button>`
+          : '';
+        const statusRow = m.status === 'failed'
+          ? `<div class="status-row">
+              ${m.error ? `<span class="error-text">${escapeHtml(m.error)}</span>` : ''}
+              <button type="button" class="retry-btn">&#8635; Retry</button>
+            </div>`
           : '';
         li.innerHTML = `
           <div class="row1">
-            <span>${escapeHtml(formatPhone(m.to.replace('+', '')))}</span>
-            <span class="row1-right">
-              ${retryBtn}
-              <span class="badge ${m.status}">${badgeInner}</span>
+            <span class="to-link-group">
+              <span class="to">${escapeHtml(formatPhone(m.to.replace('+', '')))}</span>
+              ${sourceLink}
             </span>
+            <span class="badge ${m.status}">${badgeInner}</span>
           </div>
-          <div class="msg">${escapeHtml(m.message)}</div>
-          <div class="meta">
-            <span class="meta-left">
-              <span>${date.toLocaleString()}</span>
-              ${sourceBtn}
-            </span>
-            ${m.status === 'failed' && m.error ? `<span>${escapeHtml(m.error)}</span>` : ''}
+          <div class="row2">
+            <span class="msg clamped">${escapeHtml(m.message)}</span>
+            <span class="ts">${formatTimestamp(m.timestamp)}</span>
           </div>
+          <button type="button" class="msg-toggle hidden">…more</button>
+          ${statusRow}
         `;
         if (m.status === 'failed') {
           li.querySelector('.retry-btn').addEventListener('click', () => {
@@ -405,7 +439,18 @@
             chrome.tabs.create({ url: m.url });
           });
         }
+        const msgEl = li.querySelector('.msg');
+        const toggleBtn = li.querySelector('.msg-toggle');
+        toggleBtn.addEventListener('click', () => {
+          const expanded = msgEl.classList.toggle('expanded');
+          msgEl.classList.toggle('clamped', !expanded);
+          toggleBtn.textContent = expanded ? 'Show less' : '…more';
+        });
         historyList.appendChild(li);
+        // Only measurable once attached to the live DOM — and only worth
+        // showing when the clamp actually cut something off, so a short
+        // message never gets a pointless "…more" toggle.
+        if (msgEl.scrollHeight > msgEl.clientHeight + 1) toggleBtn.classList.remove('hidden');
       });
     });
   }
@@ -424,4 +469,5 @@
 
   refreshState();
   renderHistory();
+  renderNotifTip();
 })();

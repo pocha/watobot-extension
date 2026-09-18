@@ -13,6 +13,7 @@ function bootPopup(messages) {
 
   global.window = window;
   global.document = window.document;
+  global.navigator = window.navigator;
   global.libphonenumber = require('../lib/libphonenumber-js.min.js');
 
   const sentMessages = [];

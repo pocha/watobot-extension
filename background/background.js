@@ -55,7 +55,11 @@ function notifySendFailure(entry) {
   try {
     chrome.notifications.create(`watobot-send-failed-${entry.id}`, {
       type: 'basic',
-      iconUrl: 'icons/icon128.png',
+      // A bare relative path here can fail to resolve from a service
+      // worker (no "current page" to resolve against), throwing "Unable to
+      // download all specified images." — chrome.runtime.getURL() makes it
+      // an absolute extension URL instead.
+      iconUrl: chrome.runtime.getURL('icons/icon128.png'),
       title: 'WhatsApp message failed to send',
       message: `To ${formatPhoneForDisplay(entry.to)}: ${entry.error || 'Unknown error'}`,
       priority: 2

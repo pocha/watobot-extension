@@ -17,7 +17,6 @@
 
   <nav class="tabs">
     <button class="tab-btn active" data-tab="setup">Setup</button>
-    <button class="tab-btn" data-tab="compose">New message</button>
     <button class="tab-btn" data-tab="templates">Templates</button>
     <button class="tab-btn" data-tab="history">History</button>
   </nav>
@@ -42,31 +41,32 @@
     <div id="connectMsg" class="message"></div>
 
     <button id="disconnectBtn" class="link-btn hidden">Use a different key</button>
-  </section>
 
-  <section id="tab-compose" class="tab-panel">
-    <div id="composeForm">
-      <label class="field-label" for="toInput">To (phone number)</label>
-      <input id="toInput" type="text" placeholder="e.g. +919876543210" />
-      <label class="field-label" for="messageInput">Message</label>
-      <textarea id="messageInput" rows="4" placeholder="Type your message... (Enter to send, / for templates)"></textarea>
-      <ul id="templateSuggestions" class="template-suggestions hidden"></ul>
-      <button id="sendBtn" class="primary-btn">Send</button>
-    </div>
-    <div id="sendingState" class="sending-state hidden">
-      <span class="spinner"></span>
-      <span id="sendingLabel">Sending message...</span>
-    </div>
-    <div id="sendMsg" class="message"></div>
-    <div id="resultActions" class="result-actions hidden">
-      <button id="retryBtn" class="link-btn">Edit &amp; try again</button>
+    <div id="testMessageSection" class="test-message-section hidden">
+      <h3 class="section-title">Test Message</h3>
+      <div id="composeForm">
+        <label class="field-label" for="toInput">To (phone number)</label>
+        <input id="toInput" type="text" placeholder="e.g. +919876543210" />
+        <label class="field-label" for="messageInput">Message</label>
+        <textarea id="messageInput" rows="4" placeholder="Type your message... (Enter to send, / for templates)"></textarea>
+        <ul id="templateSuggestions" class="template-suggestions hidden"></ul>
+        <button id="sendBtn" class="primary-btn">Send</button>
+      </div>
+      <div id="sendingState" class="sending-state hidden">
+        <span class="spinner"></span>
+        <span id="sendingLabel">Sending message...</span>
+      </div>
+      <div id="sendMsg" class="message"></div>
+      <div id="resultActions" class="result-actions hidden">
+        <button id="retryBtn" class="link-btn">Edit &amp; try again</button>
+      </div>
     </div>
   </section>
 
   <section id="tab-templates" class="tab-panel">
     <p class="hint">
       Create reusable messages. Type <strong>/name</strong> in the message box
-      (on any page, or in New message) to insert one.
+      (on any page, or in Setup's Test Message) to insert one.
     </p>
     <div id="templateForm">
       <label class="field-label" for="templateNameInput">Template name</label>
@@ -85,7 +85,8 @@
   </section>
 
   <section id="tab-history" class="tab-panel">
-    <input id="searchInput" type="text" class="search-input" placeholder="Search by number or message..." />
+    <div id="notifTip" class="notif-tip"></div>
+    <input id="searchInput" type="text" class="search-input" placeholder="Search by number, message, or status..." />
     <ul id="historyList" class="history-list"></ul>
     <div id="historyEmpty" class="hint hidden">No messages yet.</div>
   </section>
