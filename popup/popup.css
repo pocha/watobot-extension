@@ -268,9 +268,33 @@ textarea {
 .history-item .meta {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
   font-size: 10.5px;
   color: var(--on-surface-muted);
 }
+
+.meta-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.source-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 10.5px;
+  padding: 0;
+  text-decoration: underline;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
+}
+
+.source-btn:hover { color: var(--on-surface); }
 
 .badge {
   border-radius: 10px;

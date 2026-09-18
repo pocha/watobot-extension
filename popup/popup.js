@@ -57,6 +57,17 @@
     }
   }
 
+  // Just the hostname (no scheme, path, or query) so the source link fits the
+  // History row — the full url is still kept on the entry itself and used
+  // when the link is actually clicked.
+  function shortenUrl(url) {
+    try {
+      return new URL(url).hostname.replace(/^www\./, '');
+    } catch (e) {
+      return url;
+    }
+  }
+
   function setButtonLoading(btn, loading, loadingLabel, idleLabel, spinnerClass = 'spinner-light') {
     btn.disabled = loading;
     if (loading) {
@@ -361,6 +372,9 @@
         const retryBtn = m.status === 'failed'
           ? '<button type="button" class="icon-btn retry-btn" title="Retry">&#8635;</button>'
           : '';
+        const sourceBtn = m.url
+          ? `<button type="button" class="source-btn" title="${escapeHtml(m.url)}">${escapeHtml(shortenUrl(m.url))}</button>`
+          : '';
         li.innerHTML = `
           <div class="row1">
             <span>${escapeHtml(formatPhone(m.to.replace('+', '')))}</span>
@@ -371,7 +385,10 @@
           </div>
           <div class="msg">${escapeHtml(m.message)}</div>
           <div class="meta">
-            <span>${date.toLocaleString()}</span>
+            <span class="meta-left">
+              <span>${date.toLocaleString()}</span>
+              ${sourceBtn}
+            </span>
             ${m.status === 'failed' && m.error ? `<span>${escapeHtml(m.error)}</span>` : ''}
           </div>
         `;
@@ -381,6 +398,11 @@
             // No response handling needed here: the entry flips to "sending"
             // in storage immediately, and the existing chrome.storage.onChanged
             // listener re-renders this same row with the spinner.
+          });
+        }
+        if (m.url) {
+          li.querySelector('.source-btn').addEventListener('click', () => {
+            chrome.tabs.create({ url: m.url });
           });
         }
         historyList.appendChild(li);

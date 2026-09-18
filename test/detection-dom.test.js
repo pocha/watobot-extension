@@ -11,12 +11,13 @@ function wait(ms) {
 // Builds one jsdom document, wires up the minimal browser/chrome globals
 // content.js expects, and requires the *real* extension source (not a copy)
 // against it — so these assertions exercise the exact code that ships.
-function bootExtension(html) {
+function bootExtension(html, { apiKey } = {}) {
   const dom = new JSDOM(html, { url: 'https://example.com/', pretendToBeVisual: true });
   const { window } = dom;
 
   global.window = window;
   global.document = window.document;
+  global.location = window.location;
   global.Node = window.Node;
   global.NodeFilter = window.NodeFilter;
   global.MutationObserver = window.MutationObserver;
@@ -26,13 +27,16 @@ function bootExtension(html) {
   // number with an explicit "+" country code doesn't need connectedCountry
   // to resolve, so the stub can just leave the extension "not connected yet"
   // without affecting whether numbers are detected.
+  const sentMessages = [];
   const chromeStub = {
     runtime: {
       lastError: undefined,
-      sendMessage(_msg, callback) {
-        if (callback) setTimeout(() => callback({ ok: true, data: {} }), 0);
+      sendMessage(msg, callback) {
+        sentMessages.push(msg);
+        if (callback) setTimeout(() => callback({ ok: true, data: apiKey ? { apiKey } : {} }), 0);
       },
-      onMessage: { addListener() {} }
+      onMessage: { addListener() {} },
+      getURL(path) { return `chrome-extension://test/${path}`; }
     },
     storage: {
       onChanged: { addListener() {} }
@@ -44,9 +48,13 @@ function bootExtension(html) {
   delete require.cache[require.resolve('../content/phone-utils.js')];
   require('../content/phone-utils.js');
 
+  delete require.cache[require.resolve('../content/template-utils.js')];
+  require('../content/template-utils.js');
+
   delete require.cache[require.resolve('../content/content.js')];
   require('../content/content.js');
 
+  dom.sentMessages = sentMessages;
   return dom;
 }
 
@@ -84,6 +92,25 @@ test('detects a phone number injected into the DOM later, e.g. by client-side JS
   const icon = dom.window.document.querySelector('#dynamicBlock [data-watobot="icon"]');
   assert.ok(icon, 'expected the icon to appear once the MutationObserver picks up the new text');
   assert.equal(icon.getAttribute('data-e164'), '+442071838750');
+});
+
+test('sending a message from the compose panel includes the page url', async () => {
+  const dom = bootExtension(`<!doctype html><body>
+    <div id="block">Call us: +14155552671</div>
+  </body>`, { apiKey: 'a'.repeat(64) });
+  await wait(50);
+
+  const icon = dom.window.document.querySelector('#block [data-watobot="icon"]');
+  icon.dispatchEvent(new dom.window.Event('click'));
+
+  const host = dom.window.document.querySelector('[data-watobot="compose-host"]');
+  const shadow = host.shadowRoot;
+  shadow.querySelector('textarea').value = 'hello';
+  shadow.querySelector('.send-btn').dispatchEvent(new dom.window.Event('click'));
+
+  const sendMsg = dom.sentMessages.find((m) => m.type === 'SEND_MESSAGE');
+  assert.ok(sendMsg, 'expected a SEND_MESSAGE call');
+  assert.equal(sendMsg.url, 'https://example.com/');
 });
 
 test('detection does not depend on document focus or visibility', async () => {

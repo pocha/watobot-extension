@@ -362,7 +362,7 @@
       // progress and the final status show up in the popup's History tab
       // (with a spinner while still in flight).
       closeComposePanel();
-      chrome.runtime.sendMessage({ type: 'SEND_MESSAGE', to: target, message });
+      chrome.runtime.sendMessage({ type: 'SEND_MESSAGE', to: target, message, url: location.href });
     }
   }
 

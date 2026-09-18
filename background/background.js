@@ -105,7 +105,7 @@ async function connect(apiKey) {
 // status flips failed -> sending -> sent/failed in place) instead of adding
 // a new one, so a retried message stays a single row a user can keep an eye
 // on rather than accumulating a fresh entry per attempt.
-async function sendMessage({ to, message, id }) {
+async function sendMessage({ to, message, id, url }) {
   const { apiKey } = await getStorage('apiKey');
   if (!apiKey) {
     throw new Error('No Watobot API key configured');
@@ -123,6 +123,7 @@ async function sendMessage({ to, message, id }) {
       id: entryId,
       to: normalizedTo,
       message,
+      url: url || null,
       status: 'failed',
       error: `Up to ${MAX_CONCURRENT_SENDS} messages can be sending at once — wait for one to finish, then retry.`,
       timestamp: Date.now()
@@ -136,6 +137,7 @@ async function sendMessage({ to, message, id }) {
     id: entryId,
     to: normalizedTo,
     message,
+    url: url || null,
     status: 'sending',
     error: null,
     timestamp: Date.now()
@@ -227,7 +229,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           break;
         }
         case 'SEND_MESSAGE': {
-          const entry = await sendMessage({ to: message.to, message: message.message });
+          const entry = await sendMessage({ to: message.to, message: message.message, url: message.url });
           sendResponse({ ok: entry.status === 'sent', data: entry });
           break;
         }
@@ -238,7 +240,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             sendResponse({ ok: false, error: 'Message not found in history.' });
             break;
           }
-          const entry = await sendMessage({ to: existing.to, message: existing.message, id: existing.id });
+          const entry = await sendMessage({ to: existing.to, message: existing.message, id: existing.id, url: existing.url });
           sendResponse({ ok: entry.status === 'sent', data: entry });
           break;
         }
